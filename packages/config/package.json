@@ -1,0 +1,14 @@
+{
+  "name": "@telegram-lite/config",
+  "version": "0.1.0",
+  "private": true,
+  "main": "index.js",
+  "scripts": {
+    "build": "echo \"config build noop\"",
+    "lint": "echo \"lint config\"",
+    "typecheck": "echo \"typecheck config\"",
+    "test": "echo \"tests config\"",
+    "format": "echo \"format config\""
+  }
+}
+

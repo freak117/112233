@@ -1,0 +1,32 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Telegram Lite Desktop",
+  "version": "0.1.0",
+  "identifier": "com.telegramlite.desktop",
+  "build": {
+    "beforeDevCommand": "npm run dev --workspace @telegram-lite/web",
+    "beforeBuildCommand": "npm run build --workspace @telegram-lite/web",
+    "devUrl": "http://localhost:3000",
+    "frontendDist": "../../apps/web/.next"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Telegram Lite Desktop",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 960,
+        "minHeight": 640,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": []
+  }
+}

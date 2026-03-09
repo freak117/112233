@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@telegram-lite/types": ["packages/types/src"],
+      "@telegram-lite/api-client": ["packages/api-client/src"],
+      "@telegram-lite/realtime-client": ["packages/realtime-client/src"],
+      "@telegram-lite/ui": ["packages/ui/src"],
+      "@telegram-lite/utils": ["packages/utils/src"]
+    },
+    "target": "ES2022",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "outDir": "dist"
+  }
+}
+

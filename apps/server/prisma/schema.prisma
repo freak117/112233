@@ -1,0 +1,155 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ChatType {
+  direct
+}
+
+enum MessageType {
+  text
+  image
+  text_image
+  system
+}
+
+enum MessageStatusType {
+  sent
+  delivered
+  read
+}
+
+model User {
+  id                 String            @id @default(uuid()) @db.Uuid
+  email              String            @unique
+  passwordHash       String            @map("password_hash")
+  username           String            @unique
+  usernameNormalized String            @unique @map("username_normalized")
+  displayName        String            @map("display_name")
+  bio                String?
+  avatarUrl          String?           @map("avatar_url")
+  createdAt          DateTime          @default(now()) @map("created_at")
+  updatedAt          DateTime          @updatedAt @map("updated_at")
+  lastSeenAt         DateTime?         @map("last_seen_at")
+  isActive           Boolean           @default(true) @map("is_active")
+  chatMembers        ChatMember[]
+  sentMessages       Message[]         @relation("sent_messages")
+  messageStatuses    MessageStatus[]
+  refreshTokens      RefreshToken[]
+  files              File[]
+
+  @@index([username])
+  @@index([usernameNormalized])
+  @@map("users")
+}
+
+model Chat {
+  id            String       @id @default(uuid()) @db.Uuid
+  type          ChatType     @default(direct)
+  directKey     String       @unique @map("direct_key")
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+  lastMessageId String?      @map("last_message_id") @db.Uuid
+  members       ChatMember[]
+  messages      Message[]
+
+  @@map("chats")
+}
+
+model ChatMember {
+  id       String   @id @default(uuid()) @db.Uuid
+  chatId   String   @map("chat_id") @db.Uuid
+  userId   String   @map("user_id") @db.Uuid
+  joinedAt DateTime @default(now()) @map("joined_at")
+  chat     Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([chatId, userId])
+  @@index([userId])
+  @@map("chat_members")
+}
+
+model Message {
+  id               String              @id @default(uuid()) @db.Uuid
+  chatId           String              @map("chat_id") @db.Uuid
+  senderId         String              @map("sender_id") @db.Uuid
+  clientMessageId  String?             @map("client_message_id")
+  type             MessageType
+  text             String?
+  replyToMessageId String?             @map("reply_to_message_id") @db.Uuid
+  createdAt        DateTime            @default(now()) @map("created_at")
+  updatedAt        DateTime?           @map("updated_at")
+  deletedAt        DateTime?           @map("deleted_at")
+  chat             Chat                @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  sender           User                @relation("sent_messages", fields: [senderId], references: [id], onDelete: Cascade)
+  attachments      MessageAttachment[]
+  statuses         MessageStatus[]
+
+  @@unique([chatId, senderId, clientMessageId])
+  @@index([chatId, createdAt])
+  @@map("messages")
+}
+
+model MessageAttachment {
+  id           String   @id @default(uuid()) @db.Uuid
+  messageId    String   @map("message_id") @db.Uuid
+  fileUrl      String   @map("file_url")
+  thumbnailUrl String?  @map("thumbnail_url")
+  mimeType     String   @map("mime_type")
+  fileSize     Int      @map("file_size")
+  width        Int?
+  height       Int?
+  createdAt    DateTime @default(now()) @map("created_at")
+  message      Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+  @@map("message_attachments")
+}
+
+model MessageStatus {
+  id        String            @id @default(uuid()) @db.Uuid
+  messageId String            @map("message_id") @db.Uuid
+  userId    String            @map("user_id") @db.Uuid
+  status    MessageStatusType
+  updatedAt DateTime          @default(now()) @map("updated_at")
+  message   Message           @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+  @@index([userId])
+  @@map("message_statuses")
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  tokenHash String    @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  revokedAt DateTime? @map("revoked_at")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model File {
+  id           String   @id @default(uuid()) @db.Uuid
+  ownerId      String   @map("owner_id") @db.Uuid
+  storageKey   String   @map("storage_key")
+  originalName String   @map("original_name")
+  mimeType     String   @map("mime_type")
+  fileSize     Int      @map("file_size")
+  publicUrl    String   @map("public_url")
+  createdAt    DateTime @default(now()) @map("created_at")
+  owner        User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId])
+  @@map("files")
+}
+
