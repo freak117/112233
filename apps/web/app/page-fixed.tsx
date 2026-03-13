@@ -7,6 +7,8 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1';
 
+type ActiveTab = 'chats' | 'search' | 'profile' | 'login' | 'register';
+
 export default function HomePage(): JSX.Element {
   const api = useMemo(() => new ApiClient(API_URL), []);
   const realtime = useMemo(() => new RealtimeClient(), []);
@@ -20,7 +22,7 @@ export default function HomePage(): JSX.Element {
   // UI state
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [activeTab, setActiveTab] = useState<'chats' | 'search' | 'profile'>('chats');
+  const [activeTab, setActiveTab] = useState<ActiveTab>('login');
   
   // Chat state
   const [chats, setChats] = useState<ChatSummary[]>([]);
@@ -233,7 +235,13 @@ export default function HomePage(): JSX.Element {
     }
   }
 
-  // Realtime connection
+  // Форматирование времени сообщения
+  function formatMessageTime(dateString: string): string {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  // Realtime polling - check for new messages every 2 seconds
   useEffect(() => {
     if (!token) {
       setSocketStatus('disconnected');
@@ -242,14 +250,12 @@ export default function HomePage(): JSX.Element {
 
     setSocketStatus('connected');
     
-    // Polling every 2 seconds for new messages
     const pollInterval = setInterval(async () => {
-      if (selectedChatId) {
+      if (selectedChatId && token) {
         try {
           const data = await api.listMessages(token, selectedChatId);
           const newMessages = data.items.reverse();
           setMessages((prev) => {
-            // Only update if there are new messages
             if (newMessages.length > prev.length) {
               return newMessages;
             }
@@ -265,13 +271,7 @@ export default function HomePage(): JSX.Element {
       clearInterval(pollInterval);
       setSocketStatus('disconnected');
     };
-  }, [realtime, token, selectedChatId, api]);
-
-  // Форматирование времени сообщения
-  function formatMessageTime(dateString: string): string {
-    const date = new Date(dateString);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  }
+  }, [token, selectedChatId, api]);
 
   // Theme colors
   const theme = useMemo(() => ({
@@ -337,7 +337,7 @@ export default function HomePage(): JSX.Element {
             borderBottom: `1px solid ${theme.border}`,
           }}>
             <button
-              onClick={() => setActiveTab('chats')}
+              onClick={() => setActiveTab('login')}
               style={{
                 flex: 1,
                 padding: 16,
@@ -791,7 +791,6 @@ export default function HomePage(): JSX.Element {
               ) : (
                 chats.map((chat) => {
                   const participant = chat.participants.find(p => p.id !== me?.id);
-                  const isOnline = socketStatus === 'connected';
                   return (
                     <div
                       key={chat.chatId}
@@ -805,33 +804,20 @@ export default function HomePage(): JSX.Element {
                       }}
                     >
                       <div style={{ display: 'flex', gap: 12 }}>
-                        <div style={{ position: 'relative', flexShrink: 0 }}>
-                          <div style={{
-                            width: 48,
-                            height: 48,
-                            borderRadius: '50%',
-                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            color: '#fff',
-                            fontWeight: 600,
-                            fontSize: 18,
-                          }}>
-                            {(participant?.displayName || participant?.username || 'U')[0].toUpperCase()}
-                          </div>
-                          {isOnline && (
-                            <span style={{
-                              position: 'absolute',
-                              bottom: 2,
-                              right: 2,
-                              width: 12,
-                              height: 12,
-                              borderRadius: '50%',
-                              background: '#22c55e',
-                              border: `2px solid ${theme.bgSecondary}`,
-                            }}/>
-                          )}
+                        <div style={{
+                          width: 48,
+                          height: 48,
+                          borderRadius: '50%',
+                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: '#fff',
+                          fontWeight: 600,
+                          fontSize: 18,
+                          flexShrink: 0,
+                        }}>
+                          {(participant?.displayName || participant?.username || 'U')[0].toUpperCase()}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 4 }}>
