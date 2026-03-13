@@ -4,8 +4,9 @@
     "module": "commonjs",
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "outDir": "dist"
+    "outDir": "dist",
+    "types": ["jest", "node"]
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts", "**/*.spec.ts", "**/*.e2e-spec.ts", "**/*.integration.spec.ts", "**/*.unit.spec.ts"]
 }
 

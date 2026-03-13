@@ -2,17 +2,24 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-COPY package.json pnpm-workspace.yaml tsconfig.base.json ./
+COPY package.json package-lock.json tsconfig.base.json ./
 COPY apps/web/package.json ./apps/web/package.json
+COPY packages/api-client/package.json ./packages/api-client/package.json
+COPY packages/realtime-client/package.json ./packages/realtime-client/package.json
+COPY packages/ui/package.json ./packages/ui/package.json
+COPY packages/types/package.json ./packages/types/package.json
 
-RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
-RUN pnpm install --filter @telegram-lite/web...
+RUN npm ci --workspace @telegram-lite/web
 
 COPY apps/web ./apps/web
+COPY packages/api-client ./packages/api-client
+COPY packages/realtime-client ./packages/realtime-client
+COPY packages/ui ./packages/ui
+COPY packages/types ./packages/types
 
-RUN pnpm --filter @telegram-lite/web build
+RUN npm run build --workspace @telegram-lite/web
 
 EXPOSE 3000
 
-CMD ["pnpm", "--filter", "@telegram-lite/web", "start"]
+CMD ["npm", "run", "start", "--workspace", "@telegram-lite/web"]
 

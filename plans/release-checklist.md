@@ -28,7 +28,19 @@
 ## 5) Quality Gates
 - [ ] `npm run lint`
 - [ ] `npm run typecheck`
-- [ ] `npm run test`
+- [ ] `npm run test:unit` — Unit тесты
+- [ ] `npm run test:integration` — Integration тесты
+- [ ] `npm run test:e2e` — E2E тесты
 - [ ] `npm run build`
-- [ ] CI workflow [` .github/workflows/ci.yml`](.github/workflows/ci.yml) зеленый
+- [ ] CI workflow [`.github/workflows/ci.yml`](.github/workflows/ci.yml) зеленый
+
+## 6) Clients
+- [ ] Web клиент доступен и функционален
+- [ ] Mobile клиент запускается (Expo)
+- [ ] Desktop клиент запускается (Tauri)
+
+## 7) Documentation
+- [ ] README.md актуален
+- [ ] Smoke-check документация пройдена
+- [ ] Roadmap обновлён
 

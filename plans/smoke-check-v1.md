@@ -1,9 +1,10 @@
-# Smoke-check v1 (этап 11)
+# Smoke-check v1 (этап 13)
 
 ## Preconditions
 - Поднят стек: `docker compose up --build`
 - API доступен по `http://localhost:3001/api/v1`
 - Web доступен по `http://localhost:3000`
+- Все тесты пройдены: `npm run test:unit`, `npm run test:integration`, `npm run test:e2e`
 
 ## Сценарии (A/B)
 1. Регистрация пользователя A через [`apps/web/app/page.tsx`](apps/web/app/page.tsx).
@@ -24,4 +25,12 @@
 - Unique direct chat соблюдается.
 - Realtime порядок соблюдается: `new_message -> delivered -> read`.
 - Presence обновляется при connect/disconnect.
+
+## Mobile Check
+- Expo mobile запускается: `npm run dev --workspace @telegram-lite/mobile`
+- Auth, чаты, сообщения работают аналогично web
+
+## Desktop Check
+- Tauri desktop запускается: `npm run dev --workspace @telegram-lite/desktop`
+- Web клиент отображается в desktop оболочке
 

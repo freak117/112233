@@ -26,8 +26,10 @@ export default function HomePage(): JSX.Element {
   const [socketConnected, setSocketConnected] = useState(false);
   const [error, setError] = useState('');
 
-  const [email, setEmail] = useState('demo1@example.com');
-  const [password, setPassword] = useState('password123');
+  const [loginEmail, setLoginEmail] = useState('demo1@example.com');
+  const [loginPassword, setLoginPassword] = useState('password123');
+  const [registerEmail, setRegisterEmail] = useState('demo1@example.com');
+  const [registerPassword, setRegisterPassword] = useState('password123');
   const [username, setUsername] = useState('demo_user_1');
   const [displayName, setDisplayName] = useState('Demo User 1');
 
@@ -47,7 +49,12 @@ export default function HomePage(): JSX.Element {
     event.preventDefault();
     setError('');
     try {
-      const response = await api.register({ email, password, username, displayName });
+      const response = await api.register({
+        email: registerEmail,
+        password: registerPassword,
+        username,
+        displayName,
+      });
       setToken(response.accessToken);
       setRefreshToken(response.refreshToken);
       await bootstrapAfterAuth(response.accessToken);
@@ -60,7 +67,7 @@ export default function HomePage(): JSX.Element {
     event.preventDefault();
     setError('');
     try {
-      const response = await api.login({ email, password });
+      const response = await api.login({ email: loginEmail, password: loginPassword });
       setToken(response.accessToken);
       setRefreshToken(response.refreshToken);
       await bootstrapAfterAuth(response.accessToken);
@@ -196,10 +203,10 @@ export default function HomePage(): JSX.Element {
         <Row>
           <Card title="Auth">
             <form onSubmit={onLogin} style={{ display: 'grid', gap: 8 }}>
-              <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email" />
+              <input value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} placeholder="email" />
               <input
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                value={loginPassword}
+                onChange={(e) => setLoginPassword(e.target.value)}
                 placeholder="password"
                 type="password"
               />
@@ -208,10 +215,10 @@ export default function HomePage(): JSX.Element {
           </Card>
           <Card title="Register">
             <form onSubmit={onRegister} style={{ display: 'grid', gap: 8 }}>
-              <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email" />
+              <input value={registerEmail} onChange={(e) => setRegisterEmail(e.target.value)} placeholder="email" />
               <input
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                value={registerPassword}
+                onChange={(e) => setRegisterPassword(e.target.value)}
                 placeholder="password"
                 type="password"
               />

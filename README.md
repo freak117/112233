@@ -8,6 +8,19 @@
 - `apps/desktop` — Tauri desktop wrapper
 - `packages/*` — shared типы, клиенты и UI/утилиты
 
+## Статус проекта ✅
+
+**Все этапы roadmap завершены:**
+- ✅ Этап 0-2: Foundation, Backend skeleton, миграции
+- ✅ Этап 3-6: Auth, Users, Chats, Messages, Realtime, Uploads
+- ✅ Этап 7: Shared packages
+- ✅ Этап 8: Web client
+- ✅ Этап 9: Mobile client (Expo)
+- ✅ Этап 10: Desktop client (Tauri)
+- ✅ Этап 11: Тестирование (Unit/Integration/E2E)
+- ✅ Этап 12: DevOps и CI/CD
+- ✅ Этап 13: Стабилизация
+
 ## Структура
 
 ```text
@@ -33,33 +46,21 @@
 
 ## Быстрый старт
 
-1. Установить зависимости:
+### 1. Установка зависимостей
 
 ```bash
 npm install
 ```
 
-2. Подготовить переменные окружения:
+### 2. Подготовка переменных окружения
 
-- Скопировать `.env` из `./.env.example`
-- Для app-specific окружений использовать:
-  - `apps/server/.env.example`
-  - `apps/web/.env.example`
-  - `apps/mobile/.env.example`
-  - `apps/desktop/.env.example`
+Скопировать `.env.example` в `.env` и заменить секреты:
+- `JWT_ACCESS_SECRET`
+- `JWT_REFRESH_SECRET`
+- `POSTGRES_PASSWORD`
+- `MINIO_SECRET_KEY`
 
-3. Запустить проверки:
-
-```bash
-npm run lint
-npm run typecheck
-npm run test
-npm run build
-```
-
-## Локальный запуск
-
-### Через Docker Compose (если установлен Docker)
+### 3. Запуск через Docker Compose
 
 ```bash
 docker compose up --build
@@ -68,68 +69,85 @@ docker compose up --build
 Сервисы:
 - Web: http://localhost:3000
 - API: http://localhost:3001/api/v1
+- Health: http://localhost:3001/api/v1/health
 
-### Без Docker
+### 4. Запуск тестов
 
-Запускать по workspace-скриптам приложений вручную (server/web/mobile/desktop).
+```bash
+# Unit тесты
+npm run test:unit --workspace @telegram-lite/server
+
+# Integration тесты (требуют PostgreSQL и Redis)
+docker compose up -d postgres redis
+npm run test:integration --workspace @telegram-lite/server
+
+# E2E тесты (полный цикл)
+npm run test:e2e --workspace @telegram-lite/server
+```
 
 ## Полезные команды
 
-- `npm run lint`
-- `npm run typecheck`
-- `npm run test`
-- `npm run build`
+- `npm run lint` — линтинг
+- `npm run typecheck` — проверка типов
+- `npm run test:unit` — unit тесты
+- `npm run test:integration` — integration тесты
+- `npm run test:e2e` — e2e тесты
+- `npm run build` — сборка всех проектов
 
-## CI
+## Запуск клиентов
 
-GitHub Actions workflow: `.github/workflows/ci.yml`
+### Web
+```bash
+npm run dev --workspace @telegram-lite/web
+```
 
-## Production запуск на сервере
+### Mobile (Expo)
+```bash
+npm run dev --workspace @telegram-lite/mobile
+```
+
+### Desktop (Tauri)
+```bash
+npm run dev --workspace @telegram-lite/desktop
+```
+
+## Документация
+
+- **Полная инструкция:** [`RUNNING.md`](RUNNING.md)
+- **Roadmap:** [`plans/telegram-lite-roadmap.md`](plans/telegram-lite-roadmap.md)
+- **Smoke tests:** [`plans/smoke-check-v1.md`](plans/smoke-check-v1.md)
+- **Release checklist:** [`plans/release-checklist.md`](plans/release-checklist.md)
+- **Техническое задание:** [`telegram_lite_spec_for_ai.md`](telegram_lite_spec_for_ai.md)
+
+## CI/CD
+
+GitHub Actions workflow: [`.github/workflows/ci.yml`](.github/workflows/ci.yml)
+
+Автоматически запускает: lint, typecheck, unit, integration, e2e, build.
+
+## Production запуск
 
 1. Подготовить production env:
-
 ```bash
 cp .env.production.example .env
 ```
 
-2. Обязательно поменять секреты в `.env`:
-- `JWT_ACCESS_SECRET`
-- `JWT_REFRESH_SECRET`
-- `POSTGRES_PASSWORD`
-- `MINIO_SECRET_KEY`
+2. Обязательно поменять секреты в `.env`
 
 3. Собрать и поднять контейнеры:
-
 ```bash
 docker compose --env-file .env up -d --build
 ```
 
-4. Проверить состояние:
+4. Проверить health:
+`GET http://localhost:3001/api/v1/health`
 
-```bash
-docker compose ps
-docker compose logs -f server
-```
+### Бэкапы
 
-5. Проверить API health:
+- PostgreSQL: ежедневный `pg_dump`
+- MinIO: репликация бакета `telegram-lite`
 
-`GET http://212.119.42.176:3001/api/v1/health`
+## License
 
-### Важно по безопасности
-
-- Внешне публикуются только web/api порты.
-- PostgreSQL/Redis/MinIO остаются во внутренней сети docker-compose.
-- MinIO console в production не публикуется наружу по умолчанию.
-
-### Бэкапы (минимум)
-
-- PostgreSQL: ежедневный `pg_dump` в отдельное хранилище.
-- MinIO: регулярная репликация/копирование бакета `telegram-lite`.
-- Проверять восстановление из бэкапов не реже 1 раза в месяц.
-
-## Документация проекта
-
-- Roadmap: `plans/telegram-lite-roadmap.md`
-- Smoke checks: `plans/smoke-check-v1.md`
-- Release checklist: `plans/release-checklist.md`
+MIT
 
