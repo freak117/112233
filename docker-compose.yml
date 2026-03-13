@@ -7,7 +7,7 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-telegram_lite}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-R4m8Q2z7T1X9p6L3K5b0Wv8Yc2N4sH7}
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
@@ -31,23 +31,23 @@ services:
       dockerfile: apps/server/Dockerfile
     restart: unless-stopped
     environment:
-      NODE_ENV: ${NODE_ENV:-production}
-      PORT: ${SERVER_PORT:-3001}
-      API_PREFIX: ${API_PREFIX:-api/v1}
-      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/telegram_lite}
-      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
-      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
-      JWT_ACCESS_EXPIRES: ${JWT_ACCESS_EXPIRES:-15m}
-      JWT_REFRESH_EXPIRES: ${JWT_REFRESH_EXPIRES:-30d}
-      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-minio}
-      MINIO_PORT: ${MINIO_PORT:-9000}
-      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
-      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
-      MINIO_BUCKET: ${MINIO_BUCKET:-telegram-lite}
-      MINIO_USE_SSL: ${MINIO_USE_SSL:-false}
+      - NODE_ENV=production
+      - PORT=3001
+      - API_PREFIX=api/v1
+      - DATABASE_URL=postgresql://postgres:R4m8Q2z7T1X9p6L3K5b0Wv8Yc2N4sH7@postgres:5432/telegram_lite
+      - REDIS_URL=redis://redis:6379
+      - JWT_ACCESS_SECRET=K9f3T2a8L6pQ7x4M1nV5sR0wZ8cY2b6H
+      - JWT_REFRESH_SECRET=7Pq4X9m1Z5aK8t3R6L2nW0VbY4cH7sF1
+      - JWT_ACCESS_EXPIRES=15m
+      - JWT_REFRESH_EXPIRES=30d
+      - MINIO_ENDPOINT=minio
+      - MINIO_PORT=9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
+      - MINIO_BUCKET=telegram-lite
+      - MINIO_USE_SSL=false
     ports:
-      - '${SERVER_PORT:-3001}:3001'
+      - '3001:3001'
     depends_on:
       - postgres
       - redis
@@ -59,11 +59,11 @@ services:
       dockerfile: apps/web/Dockerfile
     restart: unless-stopped
     environment:
-      NODE_ENV: ${NODE_ENV:-production}
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001/api/v1}
-      NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL:-http://localhost:3001}
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=http://212.119.42.176:3001/api/v1
+      - NEXT_PUBLIC_WS_URL=http://212.119.42.176:3001
     ports:
-      - '${WEB_PORT:-3000}:3000'
+      - '3000:3000'
     depends_on:
       - server
 

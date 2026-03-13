@@ -1,4 +1,4 @@
-import { normalizeUsername, buildDirectChatKey, USERNAME_REGEX } from '../../src/modules/common/username.util';
+import { normalizeUsername, buildDirectChatKey, USERNAME_REGEX } from './username.util';
 
 describe('Username Utils (Unit)', () => {
   describe('normalizeUsername', () => {

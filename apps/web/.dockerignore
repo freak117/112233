@@ -1,0 +1,13 @@
+node_modules
+dist
+*.spec.ts
+*.e2e-spec.ts
+*.integration.spec.ts
+*.unit.spec.ts
+jest*.json
+coverage
+.env
+.env.test
+.env.local
+.next
+out
