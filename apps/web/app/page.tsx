@@ -16,26 +16,28 @@ export default function HomePage(): JSX.Element {
   const [token, setToken] = useState<string>('');
   const [refreshToken, setRefreshToken] = useState<string>('');
   const [me, setMe] = useState<UserProfile | null>(null);
-  
+  const [loaded, setLoaded] = useState(false);
+
   // UI state
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [activeTab, setActiveTab] = useState<'chats' | 'search' | 'profile'>('chats');
-  
+  const [activeTab, setActiveTab] = useState<'chats' | 'search' | 'profile' | 'login' | 'register'>('login');
+
   // Chat state
   const [chats, setChats] = useState<ChatSummary[]>([]);
   const [selectedChatId, setSelectedChatId] = useState<string>('');
   const [messages, setMessages] = useState<MessageItem[]>([]);
   const [messageText, setMessageText] = useState('');
-  
+  const [onlineUserIds, setOnlineUserIds] = useState<Set<string>>(new Set());
+
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchUser[]>([]);
-  
+
   // Profile state
   const [bio, setBio] = useState('');
   const [isEditingProfile, setIsEditingProfile] = useState(false);
-  
+
   // Loading & error state
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -44,14 +46,14 @@ export default function HomePage(): JSX.Element {
   // Login form state
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
-  
+
   // Register form state
   const [registerEmail, setRegisterEmail] = useState('');
   const [registerPassword, setRegisterPassword] = useState('');
   const [registerUsername, setRegisterUsername] = useState('');
   const [registerDisplayName, setRegisterDisplayName] = useState('');
 
-  const isAuth = token.length > 0;
+  const isAuth = loaded && token.length > 0;
 
   // Scroll to bottom when new messages arrive
   useEffect(() => {
@@ -67,6 +69,31 @@ export default function HomePage(): JSX.Element {
       setMe(profile);
       setBio(profile.bio ?? '');
       setChats(chatList);
+      
+      // Получаем статусы онлайна для всех участников чатов
+      const userIds = chatList.flatMap(chat => 
+        chat.participants
+          .filter(p => p.id !== profile.id)
+          .map(p => p.id)
+      );
+      
+      if (userIds.length > 0) {
+        const onlineStatus = await fetch(`${API_URL}/users/online/bulk`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ userIds }),
+        }).then(r => r.json());
+        
+        const onlineSet = new Set<string>();
+        Object.entries(onlineStatus).forEach(([id, isOnline]) => {
+          if (isOnline) onlineSet.add(id);
+        });
+        setOnlineUserIds(onlineSet);
+      }
+      
       if (chatList.length > 0) {
         setSelectedChatId(chatList[0].chatId);
         await loadMessages(chatList[0].chatId);
@@ -83,9 +110,28 @@ export default function HomePage(): JSX.Element {
     setError('');
     try {
       const response = await api.login({ email: loginEmail, password: loginPassword });
+
+      // Сохраняем сразу в localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('auth_token', response.accessToken);
+        localStorage.setItem('auth_refresh_token', response.refreshToken);
+      }
+
       setToken(response.accessToken);
       setRefreshToken(response.refreshToken);
-      await bootstrapAfterAuth(response.accessToken);
+
+      // Загружаем профиль и чаты
+      const profile = await api.getMe(response.accessToken);
+      setMe(profile);
+      setBio(profile.bio ?? '');
+
+      const chatList = await api.listChats(response.accessToken);
+      setChats(chatList);
+      if (chatList.length > 0) {
+        setSelectedChatId(chatList[0].chatId);
+        await loadMessages(chatList[0].chatId);
+      }
+      setLoaded(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -104,9 +150,28 @@ export default function HomePage(): JSX.Element {
         username: registerUsername,
         displayName: registerDisplayName,
       });
+
+      // Сохраняем сразу в localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('auth_token', response.accessToken);
+        localStorage.setItem('auth_refresh_token', response.refreshToken);
+      }
+
       setToken(response.accessToken);
       setRefreshToken(response.refreshToken);
-      await bootstrapAfterAuth(response.accessToken);
+
+      // Загружаем профиль и чаты
+      const profile = await api.getMe(response.accessToken);
+      setMe(profile);
+      setBio(profile.bio ?? '');
+
+      const chatList = await api.listChats(response.accessToken);
+      setChats(chatList);
+      if (chatList.length > 0) {
+        setSelectedChatId(chatList[0].chatId);
+        await loadMessages(chatList[0].chatId);
+      }
+      setLoaded(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -188,7 +253,7 @@ export default function HomePage(): JSX.Element {
 
   async function sendTextMessage(): Promise<void> {
     if (!token || !selectedChatId || !messageText.trim()) return;
-    
+
     const optimistic: MessageItem = {
       id: `optimistic-${Date.now()}`,
       chatId: selectedChatId,
@@ -198,10 +263,10 @@ export default function HomePage(): JSX.Element {
       clientMessageId: `client-${Date.now()}`,
       createdAt: new Date().toISOString(),
     };
-    
+
     setMessages((prev) => [...prev, optimistic]);
     setMessageText('');
-    
+
     try {
       await api.sendMessage(token, {
         chatId: selectedChatId,
@@ -223,6 +288,12 @@ export default function HomePage(): JSX.Element {
     } catch (e) {
       console.error('Logout error:', e);
     } finally {
+      // Очистить localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('auth_refresh_token');
+      }
+
       setToken('');
       setRefreshToken('');
       setMe(null);
@@ -230,10 +301,56 @@ export default function HomePage(): JSX.Element {
       setMessages([]);
       setSelectedChatId('');
       setActiveTab('chats');
+      setLoaded(true);
     }
   }
 
-  // Realtime connection
+  // Восстановление сессии из localStorage при загрузке
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const savedToken = localStorage.getItem('auth_token');
+    const savedRefreshToken = localStorage.getItem('auth_refresh_token');
+
+    if (savedToken && savedRefreshToken && !token) {
+      api.getMe(savedToken)
+        .then((profile) => {
+          setToken(savedToken);
+          setRefreshToken(savedRefreshToken);
+          setMe(profile);
+          setBio(profile.bio ?? '');
+          return api.listChats(savedToken);
+        })
+        .then((chatList) => {
+          setChats(chatList);
+          if (chatList.length > 0) {
+            setSelectedChatId(chatList[0].chatId);
+            loadMessages(chatList[0].chatId);
+          }
+          setLoaded(true);
+        })
+        .catch(() => {
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('auth_refresh_token');
+          }
+          setLoaded(true);
+        });
+    } else {
+      setLoaded(true);
+    }
+  }, []);
+
+  // Сохранение токенов в localStorage
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (token && refreshToken) {
+      localStorage.setItem('auth_token', token);
+      localStorage.setItem('auth_refresh_token', refreshToken);
+    }
+  }, [token, refreshToken]);
+
+  // Realtime polling - проверка новых сообщений каждые 2 секунды
   useEffect(() => {
     if (!token) {
       setSocketStatus('disconnected');
@@ -241,15 +358,13 @@ export default function HomePage(): JSX.Element {
     }
 
     setSocketStatus('connected');
-    
-    // Polling every 2 seconds for new messages
+
     const pollInterval = setInterval(async () => {
-      if (selectedChatId) {
+      if (selectedChatId && token) {
         try {
           const data = await api.listMessages(token, selectedChatId);
           const newMessages = data.items.reverse();
           setMessages((prev) => {
-            // Only update if there are new messages
             if (newMessages.length > prev.length) {
               return newMessages;
             }
@@ -265,7 +380,46 @@ export default function HomePage(): JSX.Element {
       clearInterval(pollInterval);
       setSocketStatus('disconnected');
     };
-  }, [realtime, token, selectedChatId, api]);
+  }, [token, selectedChatId, api]);
+
+  // Обновление статуса онлайна каждые 5 секунд
+  useEffect(() => {
+    if (!token || chats.length === 0) return;
+
+    const updateOnlineStatus = async () => {
+      const userIds = chats.flatMap(chat =>
+        chat.participants
+          .filter(p => p.id !== me?.id)
+          .map(p => p.id)
+      );
+
+      if (userIds.length === 0) return;
+
+      try {
+        const onlineStatus = await fetch(`${API_URL}/users/online/bulk`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ userIds }),
+        }).then(r => r.json());
+
+        const onlineSet = new Set<string>();
+        Object.entries(onlineStatus).forEach(([id, isOnline]) => {
+          if (isOnline) onlineSet.add(id);
+        });
+        setOnlineUserIds(onlineSet);
+      } catch (e) {
+        console.error('Online status update error:', e);
+      }
+    };
+
+    updateOnlineStatus();
+    const interval = setInterval(updateOnlineStatus, 5000);
+
+    return () => clearInterval(interval);
+  }, [token, chats, me?.id]);
 
   // Форматирование времени сообщения
   function formatMessageTime(dateString: string): string {
@@ -287,7 +441,24 @@ export default function HomePage(): JSX.Element {
     messageIn: isDarkMode ? '#1e293b' : '#f1f5f9',
   }), [isDarkMode]);
 
-  // Auth Screen
+  // Auth Screen - показываем Loading пока не восстановится сессия
+  if (!loaded) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        background: isDarkMode ? '#0f172a' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}>
+        <div style={{ textAlign: 'center', color: '#fff' }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>⏳</div>
+          <div style={{ fontSize: 18, fontWeight: 600 }}>Loading...</div>
+        </div>
+      </div>
+    );
+  }
+
   if (!isAuth) {
     return (
       <div style={{
@@ -312,9 +483,9 @@ export default function HomePage(): JSX.Element {
             textAlign: 'center',
             borderBottom: `1px solid ${theme.border}`,
           }}>
-            <h1 style={{ 
-              fontSize: 28, 
-              fontWeight: 700, 
+            <h1 style={{
+              fontSize: 28,
+              fontWeight: 700,
               margin: 0,
               background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
               WebkitBackgroundClip: 'text',
@@ -322,22 +493,15 @@ export default function HomePage(): JSX.Element {
             }}>
               Telegram Lite
             </h1>
-            <p style={{ 
-              color: theme.textSecondary, 
-              marginTop: 8,
-              fontSize: 14,
-            }}>
+            <p style={{ color: theme.textSecondary, marginTop: 8, fontSize: 14 }}>
               Fast & Simple Messaging
             </p>
           </div>
 
           {/* Tabs */}
-          <div style={{ 
-            display: 'flex', 
-            borderBottom: `1px solid ${theme.border}`,
-          }}>
+          <div style={{ display: 'flex', borderBottom: `1px solid ${theme.border}` }}>
             <button
-              onClick={() => setActiveTab('chats')}
+              onClick={() => setActiveTab('login')}
               style={{
                 flex: 1,
                 padding: 16,
@@ -389,13 +553,7 @@ export default function HomePage(): JSX.Element {
             {activeTab === 'login' ? (
               <form onSubmit={onLogin} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <div>
-                  <label style={{ 
-                    display: 'block', 
-                    color: theme.textSecondary, 
-                    fontSize: 14, 
-                    marginBottom: 8,
-                    fontWeight: 500,
-                  }}>
+                  <label style={{ display: 'block', color: theme.textSecondary, fontSize: 14, marginBottom: 8, fontWeight: 500 }}>
                     Email
                   </label>
                   <input
@@ -417,13 +575,7 @@ export default function HomePage(): JSX.Element {
                   />
                 </div>
                 <div>
-                  <label style={{ 
-                    display: 'block', 
-                    color: theme.textSecondary, 
-                    fontSize: 14, 
-                    marginBottom: 8,
-                    fontWeight: 500,
-                  }}>
+                  <label style={{ display: 'block', color: theme.textSecondary, fontSize: 14, marginBottom: 8, fontWeight: 500 }}>
                     Password
                   </label>
                   <input
@@ -458,7 +610,6 @@ export default function HomePage(): JSX.Element {
                     fontWeight: 600,
                     cursor: loading ? 'not-allowed' : 'pointer',
                     opacity: loading ? 0.7 : 1,
-                    transition: 'transform 0.2s',
                   }}
                 >
                   {loading ? 'Signing in...' : 'Sign In'}
@@ -467,13 +618,7 @@ export default function HomePage(): JSX.Element {
             ) : (
               <form onSubmit={onRegister} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <div>
-                  <label style={{ 
-                    display: 'block', 
-                    color: theme.textSecondary, 
-                    fontSize: 14, 
-                    marginBottom: 8,
-                    fontWeight: 500,
-                  }}>
+                  <label style={{ display: 'block', color: theme.textSecondary, fontSize: 14, marginBottom: 8, fontWeight: 500 }}>
                     Email
                   </label>
                   <input
@@ -495,13 +640,7 @@ export default function HomePage(): JSX.Element {
                   />
                 </div>
                 <div>
-                  <label style={{ 
-                    display: 'block', 
-                    color: theme.textSecondary, 
-                    fontSize: 14, 
-                    marginBottom: 8,
-                    fontWeight: 500,
-                  }}>
+                  <label style={{ display: 'block', color: theme.textSecondary, fontSize: 14, marginBottom: 8, fontWeight: 500 }}>
                     Username
                   </label>
                   <input
@@ -523,13 +662,7 @@ export default function HomePage(): JSX.Element {
                   />
                 </div>
                 <div>
-                  <label style={{ 
-                    display: 'block', 
-                    color: theme.textSecondary, 
-                    fontSize: 14, 
-                    marginBottom: 8,
-                    fontWeight: 500,
-                  }}>
+                  <label style={{ display: 'block', color: theme.textSecondary, fontSize: 14, marginBottom: 8, fontWeight: 500 }}>
                     Display Name
                   </label>
                   <input
@@ -551,13 +684,7 @@ export default function HomePage(): JSX.Element {
                   />
                 </div>
                 <div>
-                  <label style={{ 
-                    display: 'block', 
-                    color: theme.textSecondary, 
-                    fontSize: 14, 
-                    marginBottom: 8,
-                    fontWeight: 500,
-                  }}>
+                  <label style={{ display: 'block', color: theme.textSecondary, fontSize: 14, marginBottom: 8, fontWeight: 500 }}>
                     Password
                   </label>
                   <input
@@ -727,8 +854,8 @@ export default function HomePage(): JSX.Element {
         </div>
 
         {/* Tabs */}
-        <div style={{ 
-          display: 'flex', 
+        <div style={{
+          display: 'flex',
           borderBottom: `1px solid ${theme.border}`,
         }}>
           <button
@@ -791,7 +918,7 @@ export default function HomePage(): JSX.Element {
               ) : (
                 chats.map((chat) => {
                   const participant = chat.participants.find(p => p.id !== me?.id);
-                  const isOnline = socketStatus === 'connected';
+                  const isOnline = onlineUserIds.has(participant?.id || '');
                   return (
                     <div
                       key={chat.chatId}
@@ -1147,9 +1274,9 @@ export default function HomePage(): JSX.Element {
                       color: isOwn ? '#fff' : theme.text,
                     }}>
                       <div style={{ fontSize: 14, lineHeight: 1.4 }}>{message.text}</div>
-                      <div style={{ 
-                        fontSize: 11, 
-                        marginTop: 6, 
+                      <div style={{
+                        fontSize: 11,
+                        marginTop: 6,
                         opacity: 0.7,
                         textAlign: 'right',
                       }}>

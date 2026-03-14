@@ -1,9 +1,10 @@
-import { Body, Controller, Get, Patch, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { User } from '@prisma/client';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UsersService } from './users.service';
+import { PresenceService } from '../presence/presence.service';
 
 interface PublicUser {
   id: string;
@@ -17,7 +18,10 @@ interface PublicUser {
 @Controller('users')
 @UseGuards(AuthGuard('jwt'))
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly presenceService: PresenceService,
+  ) {}
 
   @Get('me')
   async getMe(@CurrentUser() user: User): Promise<PublicUser> {
@@ -43,6 +47,20 @@ export class UsersController {
       bio: updated.bio,
       avatarUrl: updated.avatarUrl,
     };
+  }
+
+  @Get(':id/online')
+  async isOnline(@Param('id') userId: string): Promise<{ online: boolean }> {
+    return { online: this.presenceService.isOnline(userId) };
+  }
+
+  @Get('online/bulk')
+  async getOnlineStatus(@CurrentUser() user: User, @Body('userIds') userIds: string[]): Promise<Record<string, boolean>> {
+    const result: Record<string, boolean> = {};
+    for (const id of userIds) {
+      result[id] = this.presenceService.isOnline(id);
+    }
+    return result;
   }
 }
 
