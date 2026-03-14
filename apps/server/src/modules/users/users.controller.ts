@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { User } from '@prisma/client';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -54,8 +54,8 @@ export class UsersController {
     return { online: this.presenceService.isOnline(userId) };
   }
 
-  @Get('online/bulk')
-  async getOnlineStatus(@CurrentUser() user: User, @Body('userIds') userIds: string[]): Promise<Record<string, boolean>> {
+  @Post('online/bulk')
+  async getOnlineStatus(@Body('userIds') userIds: string[]): Promise<Record<string, boolean>> {
     const result: Record<string, boolean> = {};
     for (const id of userIds) {
       result[id] = this.presenceService.isOnline(id);
